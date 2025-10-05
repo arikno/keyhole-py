@@ -1,0 +1,1530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MongoDB Cluster Analysis Report</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Custom CSS -->
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        
+        .report-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+        }
+        
+        .metric-card {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 1.5rem;
+            transition: transform 0.2s;
+        }
+        
+        .metric-card:hover {
+            transform: translateY(-2px);
+        }
+        
+        .metric-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #495057;
+        }
+        
+        .metric-label {
+            color: #6c757d;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .table-container {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 1.5rem;
+        }
+        
+        .table th {
+            background-color: #f8f9fa;
+            border-top: none;
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        .badge-cluster-type {
+            font-size: 0.8rem;
+            padding: 0.5rem 1rem;
+        }
+        
+        .cluster-type-standalone { background-color: #28a745; }
+        .cluster-type-replica { background-color: #007bff; }
+        .cluster-type-sharded { background-color: #fd7e14; }
+        
+        .status-healthy { color: #28a745; }
+        .status-warning { color: #ffc107; }
+        .status-error { color: #dc3545; }
+        
+        .json-preview {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 1rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .collapsible-section {
+            margin-bottom: 1rem;
+        }
+        
+        .collapsible-header {
+            background-color: #e9ecef;
+            padding: 1rem;
+            border-radius: 5px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .collapsible-header:hover {
+            background-color: #dee2e6;
+        }
+        
+        .collapsible-content {
+            display: none;
+            padding: 1rem;
+            background-color: white;
+            border: 1px solid #dee2e6;
+            border-top: none;
+            border-radius: 0 0 5px 5px;
+        }
+        
+        .collapsible-content.show {
+            display: block;
+        }
+        
+        .progress-custom {
+            height: 8px;
+            border-radius: 4px;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin: 1rem 0;
+        }
+        
+        .footer {
+            background-color: #343a40;
+            color: white;
+            padding: 2rem 0;
+            margin-top: 3rem;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #6c757d;
+        }
+    </style>
+    
+    
+</head>
+<body>
+    <!-- Header -->
+    <div class="report-header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="mb-0">
+                        <i class="fas fa-database me-3"></i>
+                        MongoDB Cluster Analysis Report
+                    </h1>
+                    <p class="mb-0 mt-2 opacity-75">
+                        MongoDB v8.0.14  (Amazon Linux release 2 (Karoo)) mongod replica 2 cores 1849MB memory
+                    </p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <div class="d-flex flex-column align-items-end">
+                        <span class="badge bg-light text-dark px-3 py-2 mb-2">
+                            Generated: 2025-10-05 12:07:35
+                        </span>
+                        
+                        <span class="badge badge-cluster-type cluster-type-replica px-3 py-2">
+                            Replica Cluster
+                        </span>
+                        
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container">
+        
+<!-- Cluster Overview -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="metric-card">
+            <h3 class="mb-4">
+                <i class="fas fa-server me-2"></i>Cluster Overview
+            </h3>
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="text-center">
+                        <div class="metric-value status-warning">
+                            Replica
+                        </div>
+                        <div class="metric-label">Cluster Type</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center">
+                        <div class="metric-value">8.0.14</div>
+                        <div class="metric-label">MongoDB Version</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center">
+                        <div class="metric-value">0.1</div>
+                        <div class="metric-label">Uptime (Days)</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center">
+                        <div class="metric-value">1500</div>
+                        <div class="metric-label">Total Connections</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Performance Metrics -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="metric-card">
+            <div class="text-center">
+                <div class="metric-value">31.0</div>
+                <div class="metric-label">Operations/Second</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="metric-card">
+            <div class="text-center">
+                <div class="metric-value">0.0 GB</div>
+                <div class="metric-label">Memory Usage</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="metric-card">
+            <div class="text-center">
+                <div class="metric-value">0.1 GB</div>
+                <div class="metric-label">Storage Size</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Operation Counters -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="table-container">
+            <h4 class="mb-3">
+                <i class="fas fa-chart-bar me-2"></i>Operation Counters
+            </h4>
+            <div class="row">
+                <div class="col-md-2">
+                    <div class="text-center p-3">
+                        <div class="metric-value text-primary">93394</div>
+                        <div class="metric-label">Commands</div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="text-center p-3">
+                        <div class="metric-value text-success">41132</div>
+                        <div class="metric-label">Inserts</div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="text-center p-3">
+                        <div class="metric-value text-info">1025</div>
+                        <div class="metric-label">Queries</div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="text-center p-3">
+                        <div class="metric-value text-warning">0</div>
+                        <div class="metric-label">Updates</div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="text-center p-3">
+                        <div class="metric-value text-danger">895</div>
+                        <div class="metric-label">Deletes</div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="text-center p-3">
+                        <div class="metric-value text-secondary">4073</div>
+                        <div class="metric-label">Get More</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Database Analysis -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="table-container">
+            <h4 class="mb-3">
+                <i class="fas fa-database me-2"></i>Database Analysis
+            </h4>
+            <div class="table-responsive">
+                <table class="table table-hover sortable">
+                    <thead>
+                        <tr>
+                            <th data-sort="name">Database Name</th>
+                            <th data-sort="size" class="text-end">Size on Disk</th>
+                            <th data-sort="data_size" class="text-end">Data Size</th>
+                            <th data-sort="index_size" class="text-end">Index Size</th>
+                            <th data-sort="objects" class="text-end">Documents</th>
+                            <th data-sort="indexes" class="text-end">Indexes</th>
+                            <th data-sort="avg_obj_size" class="text-end">Avg Doc Size</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        
+                        <tr>
+                            <td data-name="sample_airbnb">
+                                <strong>sample_airbnb</strong>
+                                
+                                <span class="badge bg-secondary ms-2">Empty</span>
+                                
+                            </td>
+                            <td data-size="95062607.0" class="text-end">90.66 MB</td>
+                            <td data-data-size="94362191.0" class="text-end">89.99 MB</td>
+                            <td data-index-size="700416.0" class="text-end">684.0 KB</td>
+                            <td data-objects="5555" class="text-end">5555</td>
+                            <td data-indexes="4" class="text-end">4</td>
+                            <td data-avg-obj-size="16986.89306930693" class="text-end">16.59 KB</td>
+                        </tr>
+                        
+                        <tr>
+                            <td data-name="sample_weatherdata">
+                                <strong>sample_weatherdata</strong>
+                                
+                                <span class="badge bg-secondary ms-2">Empty</span>
+                                
+                            </td>
+                            <td data-size="17346320.0" class="text-end">16.54 MB</td>
+                            <td data-data-size="16932624.0" class="text-end">16.15 MB</td>
+                            <td data-index-size="413696.0" class="text-end">404.0 KB</td>
+                            <td data-objects="10000" class="text-end">10000</td>
+                            <td data-indexes="1" class="text-end">1</td>
+                            <td data-avg-obj-size="1693.2624" class="text-end">1.65 KB</td>
+                        </tr>
+                        
+                        <tr>
+                            <td data-name="sample_restaurants">
+                                <strong>sample_restaurants</strong>
+                                
+                                <span class="badge bg-secondary ms-2">Empty</span>
+                                
+                            </td>
+                            <td data-size="15046266.0" class="text-end">14.35 MB</td>
+                            <td data-data-size="14014074.0" class="text-end">13.36 MB</td>
+                            <td data-index-size="1032192.0" class="text-end">1008.0 KB</td>
+                            <td data-objects="25554" class="text-end">25554</td>
+                            <td data-indexes="2" class="text-end">2</td>
+                            <td data-avg-obj-size="548.4101901854896" class="text-end">548.0 B</td>
+                        </tr>
+                        
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Collection Analysis -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="table-container">
+            <h4 class="mb-3">
+                <i class="fas fa-table me-2"></i>Collection Analysis
+            </h4>
+            <div class="table-responsive">
+                <table class="table table-hover sortable">
+                    <thead>
+                        <tr>
+                            <th data-sort="namespace">Namespace</th>
+                            <th data-sort="count" class="text-end">Documents</th>
+                            <th data-sort="size" class="text-end">Size</th>
+                            <th data-sort="storage_size" class="text-end">Storage Size</th>
+                            <th data-sort="index_size" class="text-end">Index Size</th>
+                            <th data-sort="nindexes" class="text-end">Indexes</th>
+                            <th data-sort="avg_obj_size" class="text-end">Avg Doc Size</th>
+                            <th>Features</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        
+                        <tr>
+                            <td data-namespace="sample_airbnb.listingsAndReviews">
+                                <strong>sample_airbnb.listingsAndReviews</strong>
+                            </td>
+                            <td data-count="5555" class="text-end">5555</td>
+                            <td data-size="94362191" class="text-end">89.99 MB</td>
+                            <td data-storage-size="60526592" class="text-end">57.72 MB</td>
+                            <td data-index-size="700416" class="text-end">684.0 KB</td>
+                            <td data-nindexes="4" class="text-end">4</td>
+                            <td data-avg-obj-size="16986" class="text-end">16.59 KB</td>
+                            <td>
+                                
+                                
+                            </td>
+                        </tr>
+                        
+                        <tr>
+                            <td data-namespace="sample_weatherdata.data">
+                                <strong>sample_weatherdata.data</strong>
+                            </td>
+                            <td data-count="10000" class="text-end">10000</td>
+                            <td data-size="16932624" class="text-end">16.15 MB</td>
+                            <td data-storage-size="4055040" class="text-end">3.87 MB</td>
+                            <td data-index-size="413696" class="text-end">404.0 KB</td>
+                            <td data-nindexes="1" class="text-end">1</td>
+                            <td data-avg-obj-size="1693" class="text-end">1.65 KB</td>
+                            <td>
+                                
+                                
+                            </td>
+                        </tr>
+                        
+                        <tr>
+                            <td data-namespace="sample_restaurants.restaurants">
+                                <strong>sample_restaurants.restaurants</strong>
+                            </td>
+                            <td data-count="25359" class="text-end">25359</td>
+                            <td data-size="10624215" class="text-end">10.13 MB</td>
+                            <td data-storage-size="6934528" class="text-end">6.61 MB</td>
+                            <td data-index-size="991232" class="text-end">968.0 KB</td>
+                            <td data-nindexes="1" class="text-end">1</td>
+                            <td data-avg-obj-size="418" class="text-end">418.0 B</td>
+                            <td>
+                                
+                                
+                            </td>
+                        </tr>
+                        
+                        <tr>
+                            <td data-namespace="sample_restaurants.neighborhoods">
+                                <strong>sample_restaurants.neighborhoods</strong>
+                            </td>
+                            <td data-count="195" class="text-end">195</td>
+                            <td data-size="3389859" class="text-end">3.23 MB</td>
+                            <td data-storage-size="3903488" class="text-end">3.72 MB</td>
+                            <td data-index-size="40960" class="text-end">40.0 KB</td>
+                            <td data-nindexes="1" class="text-end">1</td>
+                            <td data-avg-obj-size="17383" class="text-end">16.98 KB</td>
+                            <td>
+                                
+                                
+                            </td>
+                        </tr>
+                        
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Detailed Collection Information -->
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="table-container">
+            <h4 class="mb-3">
+                <i class="fas fa-list me-2"></i>Detailed Collection Information
+            </h4>
+            
+            <div class="collapsible-section">
+                <div class="collapsible-header">
+                    <div>
+                        <strong>sample_airbnb.listingsAndReviews</strong>
+                        <span class="badge bg-primary ms-2">5555 docs</span>
+                        <span class="badge bg-secondary ms-1">4 indexes</span>
+                    </div>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="collapsible-content">
+                    <div class="row">
+                        <!-- Indexes -->
+                        <div class="col-md-6">
+                            <h6>Indexes</h6>
+                            
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Key</th>
+                                            <th>Unique</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        
+                                        <tr>
+                                            <td>_id_</td>
+                                            <td>
+                                                <code>{
+  "_id": 1
+}</code>
+                                            </td>
+                                            <td>
+                                                
+                                                <span class="badge bg-secondary">No</span>
+                                                
+                                            </td>
+                                        </tr>
+                                        
+                                        <tr>
+                                            <td>name_1</td>
+                                            <td>
+                                                <code>{
+  "name": 1
+}</code>
+                                            </td>
+                                            <td>
+                                                
+                                                <span class="badge bg-secondary">No</span>
+                                                
+                                            </td>
+                                        </tr>
+                                        
+                                        <tr>
+                                            <td>address.location_2dsphere</td>
+                                            <td>
+                                                <code>{
+  "address.location": "2dsphere"
+}</code>
+                                            </td>
+                                            <td>
+                                                
+                                                <span class="badge bg-secondary">No</span>
+                                                
+                                            </td>
+                                        </tr>
+                                        
+                                        <tr>
+                                            <td>property_type_1_room_type_1_beds_1</td>
+                                            <td>
+                                                <code>{
+  "property_type": 1,
+  "room_type": 1,
+  "beds": 1
+}</code>
+                                            </td>
+                                            <td>
+                                                
+                                                <span class="badge bg-secondary">No</span>
+                                                
+                                            </td>
+                                        </tr>
+                                        
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                        </div>
+                        
+                        <!-- Sample Documents -->
+                        <div class="col-md-6">
+                            <h6>Sample Documents</h6>
+                            
+                            <div class="json-preview">
+                                
+                                <div class="mb-2">
+                                    <strong>Document 1:</strong>
+                                    <pre class="mb-1">{
+  "_id": "10006546",
+  "listing_url": "https://www.airbnb.com/rooms/10006546",
+  "name": "Ribeira Charming Duplex",
+  "summary": "Fantastic duplex apartment with three bedrooms, located in the historic area of Porto, Ribeira (Cube) - UNESCO World Heritage Site. Centenary building fully rehabilitated, without losing their original character.",
+  "space": "Privileged views of the Douro River and Ribeira square, our apartment offers the perfect conditions to discover the history and the charm of Porto. Apartment comfortable, charming, romantic and cozy in the heart of Ribeira. Within walking distance of all the most emblematic places of the city of Porto. The apartment is fully equipped to host 8 people, with cooker, oven, washing machine, dishwasher, microwave, coffee machine (Nespresso) and kettle. The apartment is located in a very typical area of the city that allows to cross with the most picturesque population of the city, welcoming, genuine and happy people that fills the streets... (truncated)</pre>
+                                </div>
+                                
+                                <div class="mb-2">
+                                    <strong>Document 2:</strong>
+                                    <pre class="mb-1">{
+  "_id": "10009999",
+  "listing_url": "https://www.airbnb.com/rooms/10009999",
+  "name": "Horto flat with small garden",
+  "summary": "One bedroom + sofa-bed in quiet and bucolic neighbourhood right next to the Botanical Garden. Small garden, outside shower, well equipped kitchen and bathroom with shower and tub. Easy for transport with many restaurants and basic facilities in the area.",
+  "space": "Lovely one bedroom + sofa-bed in the living room, perfect for two but fits up to four comfortably.  There\u00b4s a small outside garden with a shower There\u00b4s a well equipped open kitchen with both 110V / 220V wall plugs and one bathroom with shower, tub and even a sauna machine! All newly refurbished!",
+  "description": "One bedroom + sofa-bed in quiet and bucolic neighbourhood right next to the Botanical Garden. Small garden, outside shower, well equipped kitchen and bathroom with shower and tub. Easy for transport with many restaurants and basic facilities in the area. Lovely one ... (truncated)</pre>
+                                </div>
+                                
+                                <div class="mb-2">
+                                    <strong>Document 3:</strong>
+                                    <pre class="mb-1">{
+  "_id": "1001265",
+  "listing_url": "https://www.airbnb.com/rooms/1001265",
+  "name": "Ocean View Waikiki Marina w/prkg",
+  "summary": "A short distance from Honolulu's billion dollar mall, and the same distance to Waikiki. Parking included. A great location that work perfectly for business, education, or simple visit. Experience Yacht Harbor views and 5 Star Hilton Hawaiian Village.",
+  "space": "Great studio located on Ala Moana across the street from Yacht Harbor and near Ala Moana Shopping Center. Studio kitchette, parking, wifi, TV, A/C. Amenities include pool, hot tub and tennis. Sweet ocean views with nice ocean breezes.",
+  "description": "A short distance from Honolulu's billion dollar mall, and the same distance to Waikiki. Parking included. A great location that work perfectly for business, education, or simple visit. Experience Yacht Harbor views and 5 Star Hilton Hawaiian Village. Great studio located on Ala Moana across the street from Yacht Harbor and near Ala Moana S... (truncated)</pre>
+                                </div>
+                                
+                            </div>
+                            
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="collapsible-section">
+                <div class="collapsible-header">
+                    <div>
+                        <strong>sample_weatherdata.data</strong>
+                        <span class="badge bg-primary ms-2">10000 docs</span>
+                        <span class="badge bg-secondary ms-1">1 indexes</span>
+                    </div>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="collapsible-content">
+                    <div class="row">
+                        <!-- Indexes -->
+                        <div class="col-md-6">
+                            <h6>Indexes</h6>
+                            
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Key</th>
+                                            <th>Unique</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        
+                                        <tr>
+                                            <td>_id_</td>
+                                            <td>
+                                                <code>{
+  "_id": 1
+}</code>
+                                            </td>
+                                            <td>
+                                                
+                                                <span class="badge bg-secondary">No</span>
+                                                
+                                            </td>
+                                        </tr>
+                                        
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                        </div>
+                        
+                        <!-- Sample Documents -->
+                        <div class="col-md-6">
+                            <h6>Sample Documents</h6>
+                            
+                            <div class="json-preview">
+                                
+                                <div class="mb-2">
+                                    <strong>Document 1:</strong>
+                                    <pre class="mb-1">{
+  "_id": "5553a998e4b02cf7151190b8",
+  "st": "x+47600-047900",
+  "ts": "1984-03-05 13:00:00",
+  "position": {
+    "type": "Point",
+    "coordinates": [
+      -47.9,
+      47.6
+    ]
+  },
+  "elevation": 9999,
+  "callLetters": "VCSZ",
+  "qualityControlProcess": "V020",
+  "dataSource": "4",
+  "type": "FM-13",
+  "airTemperature": {
+    "value": -3.1,
+    "quality": "1"
+  },
+  "dewPoint": {
+    "value": 999.9,
+    "quality": "9"
+  },
+  "pressure": {
+    "value": 1015.3,
+    "quality": "1"
+  },
+  "wind": {
+    "direction": {
+      "angle": 999,
+      "quality": "9"
+    },
+    "type": "9",
+    "speed": {
+      "rate": 999.9,
+      "quality": "9"
+    }
+  },
+  "visibility": {
+    "distance": {
+      "value": 999999,
+      "quality": "9"
+    },
+    "variability": {
+      "value": "N",
+      "quality": "9"
+    }
+  },
+  "skyCondition": {
+    "ceilingHeight": {
+      "value": 99999,
+      "quality": "9",
+      "determination": "9"
+    },
+    "cavok": "N"
+  },
+  "sections": [
+    "AG1"
+  ],
+  "pre... (truncated)</pre>
+                                </div>
+                                
+                                <div class="mb-2">
+                                    <strong>Document 2:</strong>
+                                    <pre class="mb-1">{
+  "_id": "5553a998e4b02cf7151190b9",
+  "st": "x+45200-066500",
+  "ts": "1984-03-05 14:00:00",
+  "position": {
+    "type": "Point",
+    "coordinates": [
+      -66.5,
+      45.2
+    ]
+  },
+  "elevation": 9999,
+  "callLetters": "VC81",
+  "qualityControlProcess": "V020",
+  "dataSource": "4",
+  "type": "FM-13",
+  "airTemperature": {
+    "value": -4.7,
+    "quality": "1"
+  },
+  "dewPoint": {
+    "value": 999.9,
+    "quality": "9"
+  },
+  "pressure": {
+    "value": 1025.9,
+    "quality": "1"
+  },
+  "wind": {
+    "direction": {
+      "angle": 999,
+      "quality": "9"
+    },
+    "type": "9",
+    "speed": {
+      "rate": 999.9,
+      "quality": "9"
+    }
+  },
+  "visibility": {
+    "distance": {
+      "value": 999999,
+      "quality": "9"
+    },
+    "variability": {
+      "value": "N",
+      "quality": "9"
+    }
+  },
+  "skyCondition": {
+    "ceilingHeight": {
+      "value": 99999,
+      "quality": "9",
+      "determination": "9"
+    },
+    "cavok": "N"
+  },
+  "sections": [
+    "AG1"
+  ],
+  "pre... (truncated)</pre>
+                                </div>
+                                
+                                <div class="mb-2">
+                                    <strong>Document 3:</strong>
+                                    <pre class="mb-1">{
+  "_id": "5553a998e4b02cf7151190ba",
+  "st": "x+51900+003600",
+  "ts": "1984-03-05 14:00:00",
+  "position": {
+    "type": "Point",
+    "coordinates": [
+      3.6,
+      51.9
+    ]
+  },
+  "elevation": 9999,
+  "callLetters": "PLAT",
+  "qualityControlProcess": "V020",
+  "dataSource": "4",
+  "type": "FM-13",
+  "airTemperature": {
+    "value": 4.4,
+    "quality": "1"
+  },
+  "dewPoint": {
+    "value": 3.5,
+    "quality": "1"
+  },
+  "pressure": {
+    "value": 1030.8,
+    "quality": "1"
+  },
+  "wind": {
+    "direction": {
+      "angle": 200,
+      "quality": "1"
+    },
+    "type": "N",
+    "speed": {
+      "rate": 1.0,
+      "quality": "1"
+    }
+  },
+  "visibility": {
+    "distance": {
+      "value": 999999,
+      "quality": "9"
+    },
+    "variability": {
+      "value": "N",
+      "quality": "9"
+    }
+  },
+  "skyCondition": {
+    "ceilingHeight": {
+      "value": 99999,
+      "quality": "9",
+      "determination": "9"
+    },
+    "cavok": "N"
+  },
+  "sections": [
+    "AG1",
+    "MD1",
+    "O... (truncated)</pre>
+                                </div>
+                                
+                            </div>
+                            
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="collapsible-section">
+                <div class="collapsible-header">
+                    <div>
+                        <strong>sample_restaurants.restaurants</strong>
+                        <span class="badge bg-primary ms-2">25359 docs</span>
+                        <span class="badge bg-secondary ms-1">1 indexes</span>
+                    </div>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="collapsible-content">
+                    <div class="row">
+                        <!-- Indexes -->
+                        <div class="col-md-6">
+                            <h6>Indexes</h6>
+                            
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Key</th>
+                                            <th>Unique</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        
+                                        <tr>
+                                            <td>_id_</td>
+                                            <td>
+                                                <code>{
+  "_id": 1
+}</code>
+                                            </td>
+                                            <td>
+                                                
+                                                <span class="badge bg-secondary">No</span>
+                                                
+                                            </td>
+                                        </tr>
+                                        
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                        </div>
+                        
+                        <!-- Sample Documents -->
+                        <div class="col-md-6">
+                            <h6>Sample Documents</h6>
+                            
+                            <div class="json-preview">
+                                
+                                <div class="mb-2">
+                                    <strong>Document 1:</strong>
+                                    <pre class="mb-1">{
+  "_id": "5eb3d668b31de5d588f4292a",
+  "address": {
+    "building": "2780",
+    "coord": [
+      -73.98241999999999,
+      40.579505
+    ],
+    "street": "Stillwell Avenue",
+    "zipcode": "11224"
+  },
+  "borough": "Brooklyn",
+  "cuisine": "American",
+  "grades": [
+    {
+      "date": "2014-06-10 00:00:00",
+      "grade": "A",
+      "score": 5
+    },
+    {
+      "date": "2013-06-05 00:00:00",
+      "grade": "A",
+      "score": 7
+    },
+    {
+      "date": "2012-04-13 00:00:00",
+      "grade": "A",
+      "score": 12
+    },
+    {
+      "date": "2011-10-12 00:00:00",
+      "grade": "A",
+      "score": 12
+    }
+  ],
+  "name": "Riviera Caterer",
+  "restaurant_id": "40356018"
+}</pre>
+                                </div>
+                                
+                                <div class="mb-2">
+                                    <strong>Document 2:</strong>
+                                    <pre class="mb-1">{
+  "_id": "5eb3d668b31de5d588f4292b",
+  "address": {
+    "building": "7114",
+    "coord": [
+      -73.9068506,
+      40.6199034
+    ],
+    "street": "Avenue U",
+    "zipcode": "11234"
+  },
+  "borough": "Brooklyn",
+  "cuisine": "Delicatessen",
+  "grades": [
+    {
+      "date": "2014-05-29 00:00:00",
+      "grade": "A",
+      "score": 10
+    },
+    {
+      "date": "2014-01-14 00:00:00",
+      "grade": "A",
+      "score": 10
+    },
+    {
+      "date": "2013-08-03 00:00:00",
+      "grade": "A",
+      "score": 8
+    },
+    {
+      "date": "2012-07-18 00:00:00",
+      "grade": "A",
+      "score": 10
+    },
+    {
+      "date": "2012-03-09 00:00:00",
+      "grade": "A",
+      "score": 13
+    },
+    {
+      "date": "2011-10-14 00:00:00",
+      "grade": "A",
+      "score": 9
+    }
+  ],
+  "name": "Wilken'S Fine Food",
+  "restaurant_id": "40356483"
+}</pre>
+                                </div>
+                                
+                                <div class="mb-2">
+                                    <strong>Document 3:</strong>
+                                    <pre class="mb-1">{
+  "_id": "5eb3d668b31de5d588f4292c",
+  "address": {
+    "building": "2206",
+    "coord": [
+      -74.1377286,
+      40.6119572
+    ],
+    "street": "Victory Boulevard",
+    "zipcode": "10314"
+  },
+  "borough": "Staten Island",
+  "cuisine": "Jewish/Kosher",
+  "grades": [
+    {
+      "date": "2014-10-06 00:00:00",
+      "grade": "A",
+      "score": 9
+    },
+    {
+      "date": "2014-05-20 00:00:00",
+      "grade": "A",
+      "score": 12
+    },
+    {
+      "date": "2013-04-04 00:00:00",
+      "grade": "A",
+      "score": 12
+    },
+    {
+      "date": "2012-01-24 00:00:00",
+      "grade": "A",
+      "score": 9
+    }
+  ],
+  "name": "Kosher Island",
+  "restaurant_id": "40356442"
+}</pre>
+                                </div>
+                                
+                            </div>
+                            
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="collapsible-section">
+                <div class="collapsible-header">
+                    <div>
+                        <strong>sample_restaurants.neighborhoods</strong>
+                        <span class="badge bg-primary ms-2">195 docs</span>
+                        <span class="badge bg-secondary ms-1">1 indexes</span>
+                    </div>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="collapsible-content">
+                    <div class="row">
+                        <!-- Indexes -->
+                        <div class="col-md-6">
+                            <h6>Indexes</h6>
+                            
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Key</th>
+                                            <th>Unique</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        
+                                        <tr>
+                                            <td>_id_</td>
+                                            <td>
+                                                <code>{
+  "_id": 1
+}</code>
+                                            </td>
+                                            <td>
+                                                
+                                                <span class="badge bg-secondary">No</span>
+                                                
+                                            </td>
+                                        </tr>
+                                        
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                        </div>
+                        
+                        <!-- Sample Documents -->
+                        <div class="col-md-6">
+                            <h6>Sample Documents</h6>
+                            
+                            <div class="json-preview">
+                                
+                                <div class="mb-2">
+                                    <strong>Document 1:</strong>
+                                    <pre class="mb-1">{
+  "_id": "55cb9c666c522cafdb053a1a",
+  "geometry": {
+    "coordinates": [
+      [
+        [
+          -73.94193078816193,
+          40.70072523469547
+        ],
+        [
+          -73.9443878859649,
+          40.70042452378256
+        ],
+        [
+          -73.94424286147482,
+          40.69969927964773
+        ],
+        [
+          -73.94409591260093,
+          40.69897295461309
+        ],
+        [
+          -73.94394947271304,
+          40.69822127983908
+        ],
+        [
+          -73.94391750192877,
+          40.69805620211356
+        ],
+        [
+          -73.94380383211836,
+          40.697469265449826
+        ],
+        [
+          -73.94378455587042,
+          40.6973697290538
+        ],
+        [
+          -73.94374306706803,
+          40.69715549995503
+        ],
+        [
+          -73.9437245356891,
+          40.697059812179496
+        ],
+        [
+          -73.94368427322361,
+          40.696851909818065
+        ],
+        [
+          -73.9436842703752,
+        ... (truncated)</pre>
+                                </div>
+                                
+                                <div class="mb-2">
+                                    <strong>Document 2:</strong>
+                                    <pre class="mb-1">{
+  "_id": "55cb9c666c522cafdb053a1b",
+  "geometry": {
+    "coordinates": [
+      [
+        [
+          -73.94732672160579,
+          40.62916656720943
+        ],
+        [
+          -73.94687439946738,
+          40.626773668128486
+        ],
+        [
+          -73.94642266064318,
+          40.6243855672864
+        ],
+        [
+          -73.94542442897408,
+          40.624495609598185
+        ],
+        [
+          -73.94497031348948,
+          40.622104512937604
+        ],
+        [
+          -73.94451833370498,
+          40.61971364709504
+        ],
+        [
+          -73.94551663574785,
+          40.6196056119517
+        ],
+        [
+          -73.94651373193828,
+          40.61949401914993
+        ],
+        [
+          -73.9460669961243,
+          40.61710373918014
+        ],
+        [
+          -73.94576359491893,
+          40.61550406422122
+        ],
+        [
+          -73.94573691912028,
+          40.61536340675661
+        ],
+        [
+          -73.94657366828137,
+       ... (truncated)</pre>
+                                </div>
+                                
+                                <div class="mb-2">
+                                    <strong>Document 3:</strong>
+                                    <pre class="mb-1">{
+  "_id": "55cb9c666c522cafdb053a1c",
+  "geometry": {
+    "coordinates": [
+      [
+        [
+          -73.89138023380261,
+          40.86170058826304
+        ],
+        [
+          -73.89106280613036,
+          40.86152941211661
+        ],
+        [
+          -73.89106059904508,
+          40.86147181520911
+        ],
+        [
+          -73.89115375546018,
+          40.86091361616668
+        ],
+        [
+          -73.89174395026582,
+          40.86017714781636
+        ],
+        [
+          -73.8922570762111,
+          40.85940997630237
+        ],
+        [
+          -73.89299354227633,
+          40.85838612046538
+        ],
+        [
+          -73.8944135507376,
+          40.85643377580147
+        ],
+        [
+          -73.89477596003171,
+          40.85592952563393
+        ],
+        [
+          -73.89549889768499,
+          40.854749765891384
+        ],
+        [
+          -73.89560883346181,
+          40.85457037009787
+        ],
+        [
+          -73.89644052566297,
+        ... (truncated)</pre>
+                                </div>
+                                
+                            </div>
+                            
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+</div>
+
+
+<!-- Replica Set Information -->
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="table-container">
+            <h4 class="mb-3">
+                <i class="fas fa-network-wired me-2"></i>Replica Set Status
+            </h4>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Member</th>
+                            <th>State</th>
+                            <th>Health</th>
+                            <th>Uptime</th>
+                            <th>Last Heartbeat</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        
+                        <tr>
+                            <td><strong>atlas-ncmcuo-shard-00-00.c6mru.mongodb.net:27017</strong></td>
+                            <td>
+                                <span class="badge bg-primary">
+                                    SECONDARY
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge bg-success">
+                                    Healthy
+                                </span>
+                            </td>
+                            <td>4485s</td>
+                            <td>2025-10-05 09:07:34</td>
+                        </tr>
+                        
+                        <tr>
+                            <td><strong>atlas-ncmcuo-shard-00-01.c6mru.mongodb.net:27017</strong></td>
+                            <td>
+                                <span class="badge bg-success">
+                                    PRIMARY
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge bg-success">
+                                    Healthy
+                                </span>
+                            </td>
+                            <td>4562s</td>
+                            <td>2025-10-05 12:07:35</td>
+                        </tr>
+                        
+                        <tr>
+                            <td><strong>atlas-ncmcuo-shard-00-02.c6mru.mongodb.net:27017</strong></td>
+                            <td>
+                                <span class="badge bg-primary">
+                                    SECONDARY
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge bg-success">
+                                    Healthy
+                                </span>
+                            </td>
+                            <td>4484s</td>
+                            <td>2025-10-05 09:07:33</td>
+                        </tr>
+                        
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Sharding Information -->
+
+
+<!-- System Information -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="table-container">
+            <h4 class="mb-3">
+                <i class="fas fa-info-circle me-2"></i>System Information
+            </h4>
+            <div class="row">
+                <div class="col-md-6">
+                    <table class="table table-sm">
+                        <tr>
+                            <td><strong>Hostname:</strong></td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td><strong>OS:</strong></td>
+                            <td>Amazon Linux release 2 (Karoo) (Linux)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>CPU Architecture:</strong></td>
+                            <td>aarch64</td>
+                        </tr>
+                        <tr>
+                            <td><strong>CPU Cores:</strong></td>
+                            <td>2</td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <table class="table table-sm">
+                        <tr>
+                            <td><strong>Memory Size:</strong></td>
+                            <td>1849 MB</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Memory Limit:</strong></td>
+                            <td>1849 MB</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Storage Engine:</strong></td>
+                            <td>wiredTiger</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Process:</strong></td>
+                            <td>mongod</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>Keyhole Python</h5>
+                    <p class="mb-0">MongoDB Cluster Analysis Tool</p>
+                    <small class="text-muted">Version 1.0.0</small>
+                </div>
+                <div class="col-md-6 text-end">
+                    <p class="mb-0">
+                        <small class="text-muted">
+                            Report generated on 2025-10-05 12:07:35<br>
+                            Host:  | MongoDB Version: 8.0.14
+                        </small>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Font Awesome -->
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+    
+    <!-- Custom JavaScript -->
+    <script>
+        // Collapsible sections
+        document.addEventListener('DOMContentLoaded', function() {
+            const collapsibleHeaders = document.querySelectorAll('.collapsible-header');
+            
+            collapsibleHeaders.forEach(header => {
+                header.addEventListener('click', function() {
+                    const content = this.nextElementSibling;
+                    const icon = this.querySelector('i');
+                    
+                    if (content.classList.contains('show')) {
+                        content.classList.remove('show');
+                        icon.style.transform = 'rotate(0deg)';
+                    } else {
+                        content.classList.add('show');
+                        icon.style.transform = 'rotate(180deg)';
+                    }
+                });
+            });
+            
+            // Table sorting
+            const sortableTables = document.querySelectorAll('table.sortable');
+            sortableTables.forEach(table => {
+                const headers = table.querySelectorAll('th[data-sort]');
+                headers.forEach(header => {
+                    header.style.cursor = 'pointer';
+                    header.innerHTML += ' <i class="fas fa-sort"></i>';
+                    
+                    header.addEventListener('click', function() {
+                        const column = this.dataset.sort;
+                        const tbody = table.querySelector('tbody');
+                        const rows = Array.from(tbody.querySelectorAll('tr'));
+                        
+                        const sortedRows = rows.sort((a, b) => {
+                            const aVal = a.querySelector(`[data-${column}]`)?.dataset[column] || '';
+                            const bVal = b.querySelector(`[data-${column}]`)?.dataset[bVal] || '';
+                            
+                            if (isNaN(aVal) || isNaN(bVal)) {
+                                return aVal.localeCompare(bVal);
+                            }
+                            return parseFloat(aVal) - parseFloat(bVal);
+                        });
+                        
+                        tbody.innerHTML = '';
+                        sortedRows.forEach(row => tbody.appendChild(row));
+                    });
+                });
+            });
+        });
+        
+        // Format numbers
+        function formatNumber(num) {
+            if (num >= 1000000000) {
+                return (num / 1000000000).toFixed(1) + 'B';
+            } else if (num >= 1000000) {
+                return (num / 1000000).toFixed(1) + 'M';
+            } else if (num >= 1000) {
+                return (num / 1000).toFixed(1) + 'K';
+            }
+            return num.toString();
+        }
+        
+        // Format bytes
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+    </script>
+    
+    
+</body>
+</html>

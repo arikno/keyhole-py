@@ -1,0 +1,696 @@
+{% extends "base.html" %}
+
+{% block title %}MongoDB Cluster Analysis Report{% endblock %}
+
+{% block header_title %}MongoDB Cluster Analysis Report{% endblock %}
+{% block header_subtitle %}{{ cluster_summary }}{% endblock %}
+
+{% block content %}
+<!-- Cluster Overview -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="metric-card">
+            <h3 class="mb-4">
+                <i class="fas fa-server me-2"></i>Cluster Overview
+            </h3>
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="text-center">
+                        <div class="metric-value status-{% if cluster_type == 'standalone' %}healthy{% elif cluster_type == 'replica' %}warning{% else %}error{% endif %}">
+                            {{ cluster_type|title }}
+                        </div>
+                        <div class="metric-label">Cluster Type</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center">
+                        <div class="metric-value">{{ mongodb_version }}</div>
+                        <div class="metric-label">MongoDB Version</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center">
+                        <div class="metric-value">{{ uptime_days|floatformat(1) }}</div>
+                        <div class="metric-label">Uptime (Days)</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center">
+                        <div class="metric-value">{{ total_connections }}</div>
+                        <div class="metric-label">Total Connections</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Performance Metrics -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="metric-card">
+            <div class="text-center">
+                <div class="metric-value">{{ ops_per_second|floatformat(1) }}</div>
+                <div class="metric-label">Operations/Second</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="metric-card">
+            <div class="text-center">
+                <div class="metric-value">{{ memory_usage_gb|floatformat(1) }} GB</div>
+                <div class="metric-label">Memory Usage</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="metric-card">
+            <div class="text-center">
+                <div class="metric-value">{{ storage_size_gb|floatformat(1) }} GB</div>
+                <div class="metric-label">Storage Size</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Operation Counters -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="table-container">
+            <h4 class="mb-3">
+                <i class="fas fa-chart-bar me-2"></i>Operation Counters
+            </h4>
+            <div class="row">
+                <div class="col-md-2">
+                    <div class="text-center p-3">
+                        <div class="metric-value text-primary">{{ opcounters.command|floatformat(0) }}</div>
+                        <div class="metric-label">Commands</div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="text-center p-3">
+                        <div class="metric-value text-success">{{ opcounters.insert|floatformat(0) }}</div>
+                        <div class="metric-label">Inserts</div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="text-center p-3">
+                        <div class="metric-value text-info">{{ opcounters.query|floatformat(0) }}</div>
+                        <div class="metric-label">Queries</div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="text-center p-3">
+                        <div class="metric-value text-warning">{{ opcounters.update|floatformat(0) }}</div>
+                        <div class="metric-label">Updates</div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="text-center p-3">
+                        <div class="metric-value text-danger">{{ opcounters.delete|floatformat(0) }}</div>
+                        <div class="metric-label">Deletes</div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="text-center p-3">
+                        <div class="metric-value text-secondary">{{ opcounters.getmore|floatformat(0) }}</div>
+                        <div class="metric-label">Get More</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Database Analysis -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="table-container">
+            <h4 class="mb-3">
+                <i class="fas fa-database me-2"></i>Database Analysis
+            </h4>
+            <div class="table-responsive">
+                <table class="table table-hover sortable">
+                    <thead>
+                        <tr>
+                            <th data-sort="name">Database Name</th>
+                            <th data-sort="size" class="text-end">Size on Disk</th>
+                            <th data-sort="data_size" class="text-end">Data Size</th>
+                            <th data-sort="index_size" class="text-end">Index Size</th>
+                            <th data-sort="objects" class="text-end">Documents</th>
+                            <th data-sort="indexes" class="text-end">Indexes</th>
+                            <th data-sort="avg_obj_size" class="text-end">Avg Doc Size</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for db in databases %}
+                        <tr>
+                            <td data-name="{{ db.name }}">
+                                <strong>{{ db.name }}</strong>
+                                {% if db.empty %}
+                                <span class="badge bg-secondary ms-2">Empty</span>
+                                {% endif %}
+                            </td>
+                            <td data-size="{{ db.size_on_disk }}" class="text-end">{{ db.size_on_disk|filesizeformat }}</td>
+                            <td data-data-size="{{ db.data_size }}" class="text-end">{{ db.data_size|filesizeformat }}</td>
+                            <td data-index-size="{{ db.index_size }}" class="text-end">{{ db.index_size|filesizeformat }}</td>
+                            <td data-objects="{{ db.objects }}" class="text-end">{{ db.objects|floatformat(0) }}</td>
+                            <td data-indexes="{{ db.indexes }}" class="text-end">{{ db.indexes }}</td>
+                            <td data-avg-obj-size="{{ db.avg_obj_size }}" class="text-end">{{ db.avg_obj_size|filesizeformat }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Collection Analysis -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="table-container">
+            <h4 class="mb-3">
+                <i class="fas fa-table me-2"></i>Collection Analysis
+            </h4>
+            <div class="table-responsive">
+                <table class="table table-hover sortable">
+                    <thead>
+                        <tr>
+                            <th data-sort="namespace">Namespace</th>
+                            <th data-sort="count" class="text-end">Documents</th>
+                            <th data-sort="size" class="text-end">Size</th>
+                            <th data-sort="storage_size" class="text-end">Storage Size</th>
+                            <th data-sort="index_size" class="text-end">Index Size</th>
+                            <th data-sort="nindexes" class="text-end">Indexes</th>
+                            <th data-sort="avg_obj_size" class="text-end">Avg Doc Size</th>
+                            <th>Features</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for coll in collections %}
+                        <tr>
+                            <td data-namespace="{{ coll.namespace }}">
+                                <strong>{{ coll.namespace }}</strong>
+                            </td>
+                            <td data-count="{{ coll.count }}" class="text-end">{{ coll.count|floatformat(0) }}</td>
+                            <td data-size="{{ coll.size }}" class="text-end">{{ coll.size|filesizeformat }}</td>
+                            <td data-storage-size="{{ coll.storage_size }}" class="text-end">{{ coll.storage_size|filesizeformat }}</td>
+                            <td data-index-size="{{ coll.total_index_size }}" class="text-end">{{ coll.total_index_size|filesizeformat }}</td>
+                            <td data-nindexes="{{ coll.nindexes }}" class="text-end">{{ coll.nindexes }}</td>
+                            <td data-avg-obj-size="{{ coll.avg_obj_size }}" class="text-end">{{ coll.avg_obj_size|filesizeformat }}</td>
+                            <td>
+                                {% if coll.capped %}
+                                <span class="badge bg-info me-1">Capped</span>
+                                {% endif %}
+                                {% if coll.sharded %}
+                                <span class="badge bg-warning me-1">Sharded</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Detailed Collection Information -->
+{% if collections %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="table-container">
+            <h4 class="mb-3">
+                <i class="fas fa-list me-2"></i>Detailed Collection Information
+            </h4>
+            {% for coll in collections %}
+            <div class="collapsible-section">
+                <div class="collapsible-header">
+                    <div>
+                        <strong>{{ coll.namespace }}</strong>
+                        <span class="badge bg-primary ms-2">{{ coll.count|floatformat(0) }} docs</span>
+                        <span class="badge bg-secondary ms-1">{{ coll.nindexes }} indexes</span>
+                    </div>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="collapsible-content">
+                    <!-- Collection Structure Analysis -->
+                    {% if coll.structure_analysis %}
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <h6>Collection Structure Analysis</h6>
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <div class="text-center p-2">
+                                        <div class="metric-value {% if coll.structure_analysis.max_nesting_depth > 5 %}text-warning{% else %}text-success{% endif %}">
+                                            {{ coll.structure_analysis.max_nesting_depth }}
+                                        </div>
+                                        <div class="metric-label">Max Nesting Depth</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center p-2">
+                                        <div class="metric-value {% if coll.structure_analysis.max_array_size > 1000 %}text-warning{% else %}text-success{% endif %}">
+                                            {{ coll.structure_analysis.max_array_size }}
+                                        </div>
+                                        <div class="metric-label">Max Array Size</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center p-2">
+                                        <div class="metric-value {% if coll.structure_analysis.total_fields > 50 %}text-warning{% else %}text-success{% endif %}">{{ coll.structure_analysis.total_fields }}</div>
+                                        <div class="metric-label">Total Fields</div>
+                                        <small class="text-muted">(Arrays as single fields)</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center p-2">
+                                        <div class="metric-value text-info">{{ coll.structure_analysis.total_queryable_paths|floatformat(0) }}</div>
+                                        <div class="metric-label">Queryable Paths</div>
+                                        <small class="text-muted">(Includes array indices)</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <div class="text-center p-2">
+                                        <div class="metric-value text-secondary">{{ coll.structure_analysis.avg_nesting_depth|floatformat(1) }}</div>
+                                        <div class="metric-label">Avg Nesting Depth</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center p-2">
+                                        <div class="metric-value {% if coll.structure_analysis.fragmentation_level == 'critical' %}text-danger{% elif coll.structure_analysis.fragmentation_level == 'high' %}text-warning{% elif coll.structure_analysis.fragmentation_level == 'medium' %}text-info{% elif coll.structure_analysis.fragmentation_level == 'compressed' %}text-primary{% else %}text-success{% endif %}">
+                                            {% if coll.structure_analysis.fragmentation_level == 'compressed' %}N/A{% else %}{{ coll.structure_analysis.fragmentation_percentage }}%{% endif %}
+                                        </div>
+                                        <div class="metric-label">Fragmentation</div>
+                                        <small class="text-muted">({{ coll.structure_analysis.fragmentation_level }})</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center p-2">
+                                        <div class="metric-value text-info">{{ coll.structure_analysis.storage_efficiency|floatformat(1) }}%</div>
+                                        <div class="metric-label">Storage Efficiency</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center p-2">
+                                        <div class="metric-value text-secondary">{{ coll.structure_analysis.wasted_space_bytes|filesizeformat }}</div>
+                                        <div class="metric-label">Wasted Space</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            {% if coll.structure_analysis.issues %}
+                            <div class="alert alert-warning mt-2">
+                                <strong>Issues Found:</strong>
+                                <ul class="mb-0">
+                                    {% for issue in coll.structure_analysis.issues %}
+                                    <li>{{ issue }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                            {% endif %}
+                            
+                            {% if coll.structure_analysis.recommendations %}
+                            <div class="alert alert-info mt-2">
+                                <strong>Recommendations:</strong>
+                                <ul class="mb-0">
+                                    {% for rec in coll.structure_analysis.recommendations %}
+                                    <li>{{ rec }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                            {% endif %}
+                            
+                            <!-- Fragmentation Explanation -->
+                            {% if coll.structure_analysis.fragmentation_percentage > 0 %}
+                            <div class="alert alert-light mt-2">
+                                <strong>Fragmentation Analysis:</strong>
+                                <p class="mb-1">
+                                    <strong>Fragmentation</strong> measures wasted space due to document updates, deletions, and storage engine overhead.
+                                </p>
+                                <p class="mb-1">
+                                    <strong>Calculation:</strong> Fragmentation = (Storage Size - Data Size) / Storage Size × 100%
+                                </p>
+                                <p class="mb-0">
+                                    <strong>Storage Efficiency:</strong> {{ coll.structure_analysis.storage_efficiency }}% of allocated space contains actual data.
+                                    {% if coll.structure_analysis.fragmentation_level == 'critical' %}
+                                    <span class="text-danger">Critical fragmentation detected - consider compaction.</span>
+                                    {% elif coll.structure_analysis.fragmentation_level == 'high' %}
+                                    <span class="text-warning">High fragmentation - monitor trends and consider optimization.</span>
+                                    {% elif coll.structure_analysis.fragmentation_level == 'medium' %}
+                                    <span class="text-info">Moderate fragmentation - normal for active collections.</span>
+                                    {% elif coll.structure_analysis.fragmentation_level == 'compressed' %}
+                                    <span class="text-primary">Storage is compressed - no fragmentation detected (cloud/compressed storage).</span>
+                                    {% else %}
+                                    <span class="text-success">Low fragmentation - good storage efficiency.</span>
+                                    {% endif %}
+                                </p>
+                            </div>
+                            {% endif %}
+                            
+                            {% if coll.structure_analysis.deep_nesting_samples %}
+                            <div class="mt-3">
+                                <h6>Deep Nesting Samples:</h6>
+                                {% for sample in coll.structure_analysis.deep_nesting_samples %}
+                                <div class="json-preview mb-2">
+                                    <pre>{{ sample }}</pre>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            
+                            {% if coll.structure_analysis.large_array_samples %}
+                            <div class="mt-3">
+                                <h6>Large Array Samples:</h6>
+                                {% for sample in coll.structure_analysis.large_array_samples %}
+                                <div class="json-preview mb-2">
+                                    <pre>{{ sample }}</pre>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="row">
+                        <!-- Enhanced Index Analysis -->
+                        <div class="col-md-6">
+                            <h6>Index Analysis</h6>
+                            {% if coll.detailed_indexes %}
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Key</th>
+                                            <th>Usage</th>
+                                            <th>Issues</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for index in coll.detailed_indexes %}
+                                        <tr class="{% if index.is_duplicate %}table-warning{% endif %}">
+                                            <td>
+                                                {{ index.name }}
+                                                {% if index.expire_after_seconds > 0 %}
+                                                <span class="badge bg-info ms-1">TTL</span>
+                                                {% endif %}
+                                                {% if index.is_shard_key %}
+                                                <span class="badge bg-primary ms-1">Shard</span>
+                                                {% endif %}
+                                                {% if index.is_duplicate %}
+                                                <span class="badge bg-danger ms-1">Redundant</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <code>{{ index.key_string }}</code>
+                                            </td>
+                                            <td>
+                                                {% if index.total_ops > 0 %}
+                                                <span class="badge bg-success">{{ index.total_ops }} ops</span>
+                                                {% else %}
+                                                <span class="badge bg-danger">Unused</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if index.issues %}
+                                                <small class="text-warning">{{ index.issues|join(', ') }}</small>
+                                                {% else %}
+                                                <small class="text-success">OK</small>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% elif coll.indexes %}
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Key</th>
+                                            <th>Unique</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for index in coll.indexes %}
+                                        <tr>
+                                            <td>{{ index.name }}</td>
+                                            <td>
+                                                <code>{{ index.key|safe }}</code>
+                                            </td>
+                                            <td>
+                                                {% if index.unique %}
+                                                <span class="badge bg-success">Yes</span>
+                                                {% else %}
+                                                <span class="badge bg-secondary">No</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <p class="text-muted">No indexes found</p>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Sample Documents -->
+                        <div class="col-md-6">
+                            <h6>Sample Documents</h6>
+                            {% if coll.sample_docs %}
+                            <div class="json-preview">
+                                {% for doc in coll.sample_docs %}
+                                <div class="mb-2">
+                                    <strong>Document {{ loop.index }}:</strong>
+                                    <pre class="mb-1">{{ doc|safe }}</pre>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <p class="text-muted">No sample documents available</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Replica Set Information -->
+{% if replica_set_status %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="table-container">
+            <h4 class="mb-3">
+                <i class="fas fa-network-wired me-2"></i>Replica Set Status
+            </h4>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Member</th>
+                            <th>State</th>
+                            <th>Health</th>
+                            <th>Uptime</th>
+                            <th>Last Heartbeat</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for member in replica_set_status.members %}
+                        <tr>
+                            <td><strong>{{ member.name }}</strong></td>
+                            <td>
+                                <span class="badge {% if member.state == 1 %}bg-success{% elif member.state == 2 %}bg-primary{% else %}bg-warning{% endif %}">
+                                    {{ member.stateStr }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge {% if member.health == 1 %}bg-success{% else %}bg-danger{% endif %}">
+                                    {% if member.health == 1 %}Healthy{% else %}Unhealthy{% endif %}
+                                </span>
+                            </td>
+                            <td>{{ member.uptime|floatformat(0) }}s</td>
+                            <td>{{ member.lastHeartbeat|date("%Y-%m-%d %H:%M:%S") }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Sharding Information -->
+{% if sharding_status or shards %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="table-container">
+            <h4 class="mb-3">
+                <i class="fas fa-sitemap me-2"></i>Sharding Status
+            </h4>
+            
+            {% if shards %}
+            <h6>Shards</h6>
+            <div class="table-responsive mb-4">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Shard ID</th>
+                            <th>Host</th>
+                            <th>State</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for shard in shards %}
+                        <tr>
+                            <td><strong>{{ shard._id }}</strong></td>
+                            <td>{{ shard.host }}</td>
+                            <td>
+                                <span class="badge {% if shard.state == 1 %}bg-success{% else %}bg-warning{% endif %}">
+                                    {% if shard.state == 1 %}Active{% else %}Inactive{% endif %}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+            
+            {% if sharding_status %}
+            <h6>Sharding Configuration</h6>
+            <div class="json-preview">
+                {{ sharding_status|safe }}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Cluster Health Analysis -->
+{% if cluster_health %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="table-container">
+            <h4 class="mb-3">
+                <i class="fas fa-heartbeat me-2"></i>Cluster Health Analysis
+            </h4>
+            <div class="row align-items-center mb-3">
+                <div class="col-md-6">
+                    <div class="d-flex align-items-center">
+                        <span class="badge {% if cluster_health.overall_health == 'healthy' %}bg-success{% elif cluster_health.overall_health == 'warning' %}bg-warning{% else %}bg-danger{% endif %} px-3 py-2 me-3">
+                            {{ cluster_health.overall_health|title }} Status
+                        </span>
+                        <small class="text-muted">{{ cluster_health.timestamp|date("%Y-%m-%d %H:%M:%S") }}</small>
+                    </div>
+                </div>
+                <div class="col-md-6 text-end">
+                    {% if cluster_health.metrics %}
+                    <small class="text-muted">
+                        Memory: {{ cluster_health.metrics.memory_usage_mb|floatformat(0) }}MB | 
+                        Connections: {{ cluster_health.metrics.current_connections }} | 
+                        Operations: {{ cluster_health.metrics.total_operations|floatformat(0) }}
+                    </small>
+                    {% endif %}
+                </div>
+            </div>
+            
+            {% if cluster_health.issues %}
+            <div class="alert alert-warning">
+                <strong><i class="fas fa-exclamation-triangle me-2"></i>Issues Detected:</strong>
+                <ul class="mb-0 mt-2">
+                    {% for issue in cluster_health.issues %}
+                    <li>{{ issue }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+            
+            {% if cluster_health.recommendations %}
+            <div class="alert alert-info">
+                <strong><i class="fas fa-lightbulb me-2"></i>Recommendations:</strong>
+                <ul class="mb-0 mt-2">
+                    {% for rec in cluster_health.recommendations %}
+                    <li>{{ rec }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+            
+            {% if not cluster_health.issues and not cluster_health.recommendations %}
+            <div class="alert alert-success">
+                <i class="fas fa-check-circle me-2"></i>No issues detected. Cluster is running optimally.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- System Information -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="table-container">
+            <h4 class="mb-3">
+                <i class="fas fa-info-circle me-2"></i>System Information
+            </h4>
+            <div class="row">
+                <div class="col-md-6">
+                    <table class="table table-sm">
+                        <tr>
+                            <td><strong>Hostname:</strong></td>
+                            <td>{{ host_info.hostname }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>OS:</strong></td>
+                            <td>{{ host_info.os_name }} ({{ host_info.os_type }})</td>
+                        </tr>
+                        <tr>
+                            <td><strong>CPU Architecture:</strong></td>
+                            <td>{{ host_info.cpu_arch }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>CPU Cores:</strong></td>
+                            <td>{{ host_info.num_cores }}</td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <table class="table table-sm">
+                        <tr>
+                            <td><strong>Memory Size:</strong></td>
+                            <td>{{ host_info.mem_size_mb|floatformat(0) }} MB</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Memory Limit:</strong></td>
+                            <td>{{ host_info.mem_limit_mb|floatformat(0) }} MB</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Storage Engine:</strong></td>
+                            <td>{{ storage_engine }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Process:</strong></td>
+                            <td>{{ process_type }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
