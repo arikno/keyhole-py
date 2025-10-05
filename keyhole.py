@@ -22,6 +22,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 from src.mongodb_client import MongoDBClient
 from src.cluster_stats import ClusterStatsCollector
 from src.report_generator import HTMLReportGenerator
+from src.csv_exporter import CSVExporter
 
 
 def setup_logging(verbose: bool = False):
@@ -58,6 +59,9 @@ Examples:
   
   # Fast mode (skip detailed collection analysis)
   python keyhole.py --allinfo "mongodb://user:pass@host:port/db" --fast --output report.html
+  
+  # Export consolidated data to CSV files
+  python keyhole.py --allinfo "mongodb://user:pass@host:port/db" --csv --output report.html
         """
     )
     
@@ -75,6 +79,7 @@ Examples:
     
     # Output options
     parser.add_argument('--output', '-o', help='Output HTML file path')
+    parser.add_argument('--csv', action='store_true', help='Export consolidated data to CSV files')
     parser.add_argument('--no-open', action='store_true', help='Do not open the report in browser after generation')
     
     # Connection options
@@ -210,6 +215,20 @@ def perform_cluster_analysis(client: MongoDBClient, args):
     logger.info("Generating HTML report")
     generator = HTMLReportGenerator()
     generator.generate_cluster_report(stats, args.output)
+    
+    # Export CSV files if requested
+    if args.csv:
+        logger.info("Exporting consolidated data to CSV files")
+        csv_exporter = CSVExporter()
+        
+        # Generate base filename from HTML output filename
+        base_filename = os.path.splitext(os.path.basename(args.output))[0] if args.output else None
+        
+        csv_files = csv_exporter.export_cluster_data(stats, base_filename)
+        
+        logger.info(f"CSV files exported:")
+        logger.info(f"  Indexes: {csv_files['indexes']}")
+        logger.info(f"  Collections: {csv_files['collections']}")
     
     logger.info("Cluster analysis completed")
 
