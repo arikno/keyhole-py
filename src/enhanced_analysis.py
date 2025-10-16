@@ -751,11 +751,35 @@ class EnhancedAnalyzer:
             
             # Check operation counters for anomalies
             opcounters = server_status.get('opcounters', {})
-            total_ops = sum(opcounters.values())
+            self.logger.debug(f"Opcounters structure: {opcounters}")
+            
+            # Handle both simple opcounters and nested opcountersRepl structures
+            total_ops = 0
+            if isinstance(opcounters, dict):
+                for key, value in opcounters.items():
+                    self.logger.debug(f"Opcounters key '{key}': {type(value)} = {value}")
+                    if isinstance(value, (int, float)):
+                        total_ops += value
+                    elif isinstance(value, dict):
+                        # Handle nested structures like opcountersRepl
+                        nested_sum = sum(v for v in value.values() if isinstance(v, (int, float)))
+                        total_ops += nested_sum
+                        self.logger.debug(f"Nested opcounters sum for '{key}': {nested_sum}")
+            
+            self.logger.debug(f"Total operations calculated: {total_ops}")
             
             if total_ops > 0:
                 # Check for high delete ratio (might indicate data churn)
-                delete_ratio = opcounters.get('delete', 0) / total_ops
+                delete_ops = 0
+                if isinstance(opcounters, dict):
+                    # Try to get delete operations from both simple and nested structures
+                    delete_ops = opcounters.get('delete', 0)
+                    if isinstance(delete_ops, dict):
+                        delete_ops = sum(v for v in delete_ops.values() if isinstance(v, (int, float)))
+                    elif not isinstance(delete_ops, (int, float)):
+                        delete_ops = 0
+                
+                delete_ratio = delete_ops / total_ops
                 if delete_ratio > 0.1:
                     health_report['issues'].append("High delete operation ratio detected")
                     health_report['recommendations'].append("Review data lifecycle management")
