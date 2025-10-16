@@ -369,7 +369,11 @@ class ClusterStatsCollector:
                             if coll_stats:
                                 collection_stats.append(coll_stats)
                         except Exception as e:
-                            self.logger.error(f"Error collecting stats for collection {db_name}.{coll_name}: {e}")
+                            # Check if this might be a view that wasn't filtered out
+                            if self.client.is_view(db_name, coll_name):
+                                self.logger.debug(f"Skipping view (detected during analysis): {db_name}.{coll_name}")
+                            else:
+                                self.logger.error(f"Error collecting stats for collection {db_name}.{coll_name}: {e}")
             
             return db_stats, collection_stats
             
@@ -380,6 +384,11 @@ class ClusterStatsCollector:
     def _collect_single_collection_stats(self, db_name: str, collection_name: str) -> Optional[CollectionStats]:
         """Collect statistics for a single collection"""
         try:
+            # Check if this is a view first
+            if self.client.is_view(db_name, collection_name):
+                self.logger.debug(f"Skipping view: {db_name}.{collection_name}")
+                return None
+            
             # Get collection stats
             coll_stats_raw = self.client.get_collection_stats(db_name, collection_name)
             

@@ -180,22 +180,79 @@ class MongoDBClient:
     
     def get_collections(self, db_name: str) -> List[str]:
         """
-        Get list of collection names in a database
+        Get list of collection names in a database (excluding views)
         
         Args:
             db_name: Database name
             
         Returns:
-            List of collection names
+            List of collection names (views excluded)
         """
         if not self.client:
             return []
             
         try:
-            return self.client[db_name].list_collection_names()
+            # Get all collections and views
+            collections_info = list(self.client[db_name].list_collections())
+            
+            # Filter out views and system collections
+            collection_names = []
+            for coll_info in collections_info:
+                coll_name = coll_info['name']
+                
+                # Skip system collections
+                if coll_name.startswith('system.'):
+                    continue
+                
+                # Skip views (collections with 'viewOn' property)
+                if coll_info.get('type') == 'view':
+                    self.logger.debug(f"Skipping view: {db_name}.{coll_name}")
+                    continue
+                
+                # Skip if it has viewOn property (indicates it's a view)
+                if 'viewOn' in coll_info:
+                    self.logger.debug(f"Skipping view (has viewOn): {db_name}.{coll_name}")
+                    continue
+                
+                collection_names.append(coll_name)
+            
+            return collection_names
+            
         except Exception as e:
             self.logger.error(f"Error getting collections for {db_name}: {e}")
             return []
+    
+    def is_view(self, db_name: str, collection_name: str) -> bool:
+        """
+        Check if a collection is actually a view
+        
+        Args:
+            db_name: Database name
+            collection_name: Collection name
+            
+        Returns:
+            True if it's a view, False otherwise
+        """
+        if not self.client:
+            return False
+            
+        try:
+            # Get collection info
+            collections_info = list(self.client[db_name].list_collections(
+                filter={'name': collection_name}
+            ))
+            
+            if not collections_info:
+                return False
+            
+            coll_info = collections_info[0]
+            
+            # Check if it's a view
+            return (coll_info.get('type') == 'view' or 'viewOn' in coll_info)
+            
+        except Exception as e:
+            self.logger.error(f"Error checking if {db_name}.{collection_name} is a view: {e}")
+            return False
     
     def get_collection_stats(self, db_name: str, collection_name: str) -> Dict[str, Any]:
         """
