@@ -404,18 +404,25 @@ class EnhancedAnalyzer:
                         if len(analysis.large_array_samples) < 3:
                             analysis.large_array_samples.append(doc)
                 
-                # Analyze fields (arrays as single fields)
-                doc_fields = self._extract_fields(doc)
-                field_counts.append(len(doc_fields))
+                # Analyze fields using improved counting method
+                field_counts_data = self._extract_fields_alternative(doc)
+                field_counts.append(field_counts_data['all_fields'])
                 
                 # Analyze queryable paths (includes array indices)
                 doc_queryable_paths = self._extract_queryable_paths(doc)
                 queryable_path_counts.append(len(doc_queryable_paths))
                 
+                # Extract field names for common fields analysis
+                doc_fields = self._extract_fields(doc)
                 for field in doc_fields:
                     all_fields[field] = all_fields.get(field, 0) + 1
                     if field not in field_types:
-                        field_types[field] = type(doc.get(field, None)).__name__
+                        # Try to get the field type more accurately
+                        try:
+                            field_value = self._get_nested_value(doc, field)
+                            field_types[field] = type(field_value).__name__
+                        except:
+                            field_types[field] = 'unknown'
             
             # Calculate averages
             analysis.avg_nesting_depth = sum(nesting_depths) / len(nesting_depths) if nesting_depths else 0
@@ -488,16 +495,83 @@ class EnhancedAnalyzer:
             for key, value in obj.items():
                 field_path = f"{path}.{key}" if path else key
                 fields.append(field_path)
-                fields.extend(self._extract_fields(value, field_path))
-        elif isinstance(obj, list):
-            # Count arrays as single fields, not individual array elements
-            if path:  # Only add if it's a nested array, not root level
-                fields.append(path)
-            # Still analyze the structure of array elements for nested objects
-            if obj and isinstance(obj[0], (dict, list)):
-                fields.extend(self._extract_fields(obj[0], f"{path}[0]"))
+                
+                # Recursively extract fields from nested objects
+                if isinstance(value, dict):
+                    fields.extend(self._extract_fields(value, field_path))
+                elif isinstance(value, list) and value:
+                    # For arrays, analyze the structure of the first element
+                    # but only add the array field itself, not individual elements
+                    if isinstance(value[0], (dict, list)):
+                        fields.extend(self._extract_fields(value[0], f"{field_path}[]"))
         
         return fields
+    
+    def _extract_fields_alternative(self, obj: Any, path: str = "") -> Dict[str, int]:
+        """
+        Extract field counts using different counting methods for better analysis
+        
+        Returns:
+            Dict with different field counting approaches:
+            - 'top_level': Only top-level fields
+            - 'all_fields': All field paths (arrays as single fields)
+            - 'array_fields': Fields that are arrays
+            - 'nested_fields': Fields in nested objects
+        """
+        counts = {
+            'top_level': 0,
+            'all_fields': 0,
+            'array_fields': 0,
+            'nested_fields': 0
+        }
+        
+        if isinstance(obj, dict):
+            # Count top-level fields
+            counts['top_level'] = len(obj)
+            
+            for key, value in obj.items():
+                field_path = f"{path}.{key}" if path else key
+                counts['all_fields'] += 1
+                
+                if isinstance(value, dict):
+                    counts['nested_fields'] += 1
+                    # Recursively count nested fields
+                    nested_counts = self._extract_fields_alternative(value, field_path)
+                    for count_type, count in nested_counts.items():
+                        counts[count_type] += count
+                elif isinstance(value, list):
+                    counts['array_fields'] += 1
+                    counts['all_fields'] += 1  # Array itself counts as one field
+                    
+                    # Analyze array structure if it contains objects
+                    if value and isinstance(value[0], (dict, list)):
+                        # Count fields from first array element structure
+                        first_element_counts = self._extract_fields_alternative(value[0], f"{field_path}[]")
+                        counts['all_fields'] += first_element_counts['all_fields']
+                        counts['nested_fields'] += first_element_counts['nested_fields']
+        
+        return counts
+    
+    def _get_nested_value(self, obj: Any, field_path: str) -> Any:
+        """Get value from nested field path like 'class.history'"""
+        try:
+            keys = field_path.split('.')
+            current = obj
+            for key in keys:
+                if '[]' in key:
+                    # Handle array notation
+                    array_key = key.replace('[]', '')
+                    if isinstance(current, dict) and array_key in current:
+                        current = current[array_key]
+                        if isinstance(current, list) and current:
+                            current = current[0]  # Get first element
+                    else:
+                        return None
+                else:
+                    current = current[key]
+            return current
+        except (KeyError, TypeError, IndexError):
+            return None
     
     def _extract_queryable_paths(self, obj: Any, path: str = "") -> List[str]:
         """Extract all queryable field paths including array indices (old behavior)"""
