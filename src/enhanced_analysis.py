@@ -365,9 +365,11 @@ class EnhancedAnalyzer:
         try:
             collection = self.client.client[db_name][collection_name]
             
-            # Get sample documents
+            # Get sample documents with deterministic ordering for consistency
+            # Sort by _id descending to get latest documents
             sample_docs = list(collection.aggregate([
-                {"$sample": {"size": sample_size}}
+                {"$sort": {"_id": -1}},  # Sort by _id descending for latest docs
+                {"$limit": sample_size}
             ]))
             
             if not sample_docs:
@@ -424,11 +426,22 @@ class EnhancedAnalyzer:
                         except:
                             field_types[field] = 'unknown'
             
-            # Calculate averages
+            # Calculate averages and statistics
             analysis.avg_nesting_depth = sum(nesting_depths) / len(nesting_depths) if nesting_depths else 0
             analysis.avg_array_size = sum(array_sizes) / len(array_sizes) if array_sizes else 0
+            
+            # Field counting - use consistent methodology
+            # total_fields = unique fields found across latest sampled documents
+            # This provides deterministic results by always sampling the same latest documents
             analysis.total_fields = len(all_fields)
+            
+            # total_queryable_paths = average queryable paths per document
             analysis.total_queryable_paths = sum(queryable_path_counts) / len(queryable_path_counts) if queryable_path_counts else 0
+            
+            # Add additional field statistics for better analysis
+            analysis.avg_fields_per_doc = sum(field_counts) / len(field_counts) if field_counts else 0
+            analysis.max_fields_per_doc = max(field_counts) if field_counts else 0
+            analysis.min_fields_per_doc = min(field_counts) if field_counts else 0
             
             # Get common fields
             analysis.common_fields = sorted(all_fields.items(), key=lambda x: x[1], reverse=True)[:10]
