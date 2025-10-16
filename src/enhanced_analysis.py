@@ -404,9 +404,9 @@ class EnhancedAnalyzer:
                         if len(analysis.large_array_samples) < 3:
                             analysis.large_array_samples.append(doc)
                 
-                # Analyze fields using improved counting method
+                # Analyze fields using correct counting method
                 field_counts_data = self._extract_fields_alternative(doc)
-                field_counts.append(field_counts_data['all_fields'])
+                field_counts.append(field_counts_data['distinct_fields'])
                 
                 # Analyze queryable paths (includes array indices)
                 doc_queryable_paths = self._extract_queryable_paths(doc)
@@ -509,18 +509,18 @@ class EnhancedAnalyzer:
     
     def _extract_fields_alternative(self, obj: Any, path: str = "") -> Dict[str, int]:
         """
-        Extract field counts using different counting methods for better analysis
+        Extract field counts using correct counting methodology
         
         Returns:
             Dict with different field counting approaches:
             - 'top_level': Only top-level fields
-            - 'all_fields': All field paths (arrays as single fields)
+            - 'distinct_fields': Top-level fields + distinct fields from array objects (once per field type)
             - 'array_fields': Fields that are arrays
             - 'nested_fields': Fields in nested objects
         """
         counts = {
             'top_level': 0,
-            'all_fields': 0,
+            'distinct_fields': 0,
             'array_fields': 0,
             'nested_fields': 0
         }
@@ -528,29 +528,53 @@ class EnhancedAnalyzer:
         if isinstance(obj, dict):
             # Count top-level fields
             counts['top_level'] = len(obj)
+            counts['distinct_fields'] = len(obj)
             
             for key, value in obj.items():
                 field_path = f"{path}.{key}" if path else key
-                counts['all_fields'] += 1
                 
                 if isinstance(value, dict):
                     counts['nested_fields'] += 1
                     # Recursively count nested fields
                     nested_counts = self._extract_fields_alternative(value, field_path)
-                    for count_type, count in nested_counts.items():
-                        counts[count_type] += count
+                    counts['distinct_fields'] += nested_counts['distinct_fields']
+                    counts['nested_fields'] += nested_counts['nested_fields']
                 elif isinstance(value, list):
                     counts['array_fields'] += 1
-                    counts['all_fields'] += 1  # Array itself counts as one field
+                    # Array itself counts as one field
                     
                     # Analyze array structure if it contains objects
-                    if value and isinstance(value[0], (dict, list)):
-                        # Count fields from first array element structure
-                        first_element_counts = self._extract_fields_alternative(value[0], f"{field_path}[]")
-                        counts['all_fields'] += first_element_counts['all_fields']
-                        counts['nested_fields'] += first_element_counts['nested_fields']
+                    if value and isinstance(value[0], dict):
+                        # Count distinct fields from array objects (once per field type)
+                        distinct_array_fields = self._extract_distinct_array_fields(value, field_path)
+                        counts['distinct_fields'] += distinct_array_fields
+                    # For primitive arrays, don't count individual items as fields
         
         return counts
+    
+    def _extract_distinct_array_fields(self, array: List[Any], base_path: str) -> int:
+        """
+        Extract distinct field count from array objects (count each field type once)
+        
+        Args:
+            array: List of objects
+            base_path: Base path for the array
+            
+        Returns:
+            Number of distinct fields found in array objects
+        """
+        if not array or not isinstance(array[0], dict):
+            return 0
+        
+        # Collect all unique field names from all objects in the array
+        distinct_fields = set()
+        
+        for obj in array:
+            if isinstance(obj, dict):
+                for key in obj.keys():
+                    distinct_fields.add(key)
+        
+        return len(distinct_fields)
     
     def _get_nested_value(self, obj: Any, field_path: str) -> Any:
         """Get value from nested field path like 'class.history'"""
@@ -574,17 +598,25 @@ class EnhancedAnalyzer:
             return None
     
     def _extract_queryable_paths(self, obj: Any, path: str = "") -> List[str]:
-        """Extract all queryable field paths including array indices (old behavior)"""
+        """Extract all queryable field paths including array indices"""
         fields = []
         
         if isinstance(obj, dict):
             for key, value in obj.items():
                 field_path = f"{path}.{key}" if path else key
                 fields.append(field_path)
-                fields.extend(self._extract_queryable_paths(value, field_path))
-        elif isinstance(obj, list):
-            for i, item in enumerate(obj):
-                fields.extend(self._extract_queryable_paths(item, f"{path}[{i}]"))
+                
+                # Recursively extract paths from nested objects
+                if isinstance(value, dict):
+                    fields.extend(self._extract_queryable_paths(value, field_path))
+                elif isinstance(value, list) and value:
+                    # For arrays, add paths for each array element
+                    for i, item in enumerate(value):
+                        if isinstance(item, (dict, list)):
+                            fields.extend(self._extract_queryable_paths(item, f"{field_path}[{i}]"))
+                        else:
+                            # For primitive array elements, just add the indexed path
+                            fields.append(f"{field_path}[{i}]")
         
         return fields
     
