@@ -337,14 +337,24 @@ class ClusterStatsCollector:
             # Get database stats
             db_stats_raw = self.client.get_database_stats(db_name)
             
+            # Determine if database is empty based on multiple indicators
+            objects_count = db_stats_raw.get('objects', 0)
+            collections_count = db_stats_raw.get('collections', 0)
+            data_size = db_stats_raw.get('dataSize', 0)
+            
+            # Database is empty if it has no objects, no collections, and no data
+            is_empty = (objects_count == 0 and collections_count == 0 and data_size == 0)
+            
+            self.logger.debug(f"Database {db_name} empty check: objects={objects_count}, collections={collections_count}, dataSize={data_size}, is_empty={is_empty}")
+            
             db_stats = DatabaseStats(
                 name=db_name,
                 size_on_disk=db_stats_raw.get('dataSize', 0) + db_stats_raw.get('indexSize', 0),
-                empty=db_stats_raw.get('empty', True),
-                data_size=db_stats_raw.get('dataSize', 0),
+                empty=is_empty,
+                data_size=data_size,
                 storage_size=db_stats_raw.get('storageSize', 0),
                 index_size=db_stats_raw.get('indexSize', 0),
-                objects=db_stats_raw.get('objects', 0),
+                objects=objects_count,
                 indexes=db_stats_raw.get('indexes', 0),
                 avg_obj_size=db_stats_raw.get('avgObjSize', 0)
             )
