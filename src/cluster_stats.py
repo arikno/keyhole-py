@@ -241,8 +241,15 @@ class ClusterStatsCollector:
                 
                 # Memory
                 mem = status.get('mem', {})
+                self.logger.debug(f"Memory data from serverStatus: {mem}")
                 stats.server_status.mem_resident = mem.get('resident', 0)
                 stats.server_status.mem_virtual = mem.get('virtual', 0)
+                self.logger.debug(f"Extracted mem_resident: {stats.server_status.mem_resident}, mem_virtual: {stats.server_status.mem_virtual}")
+                
+                # If resident is 0, try to use virtual as fallback
+                if stats.server_status.mem_resident == 0 and stats.server_status.mem_virtual > 0:
+                    self.logger.debug(f"mem_resident is 0, using mem_virtual as fallback: {stats.server_status.mem_virtual}")
+                    stats.server_status.mem_resident = stats.server_status.mem_virtual
                 
                 # Operation counters
                 ops = status.get('opcounters', {})

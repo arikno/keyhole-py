@@ -71,7 +71,12 @@ class HTMLReportGenerator:
         current_connections = stats.server_status.connections_current
         total_connections = (stats.server_status.connections_current + 
                            stats.server_status.connections_available)
-        memory_usage_gb = stats.server_status.mem_resident / (1024 * 1024) if stats.server_status.mem_resident else 0
+        # MongoDB mem.resident is in MB, convert to GB
+        memory_usage_gb = stats.server_status.mem_resident / 1024 if stats.server_status.mem_resident else 0
+        # Debug logging for memory calculation
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.debug(f"Memory calculation: mem_resident={stats.server_status.mem_resident}, memory_usage_gb={memory_usage_gb}")
         
         # Prepare operation counters
         opcounters = {
