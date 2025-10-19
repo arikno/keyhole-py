@@ -14,7 +14,7 @@
                 <i class="fas fa-server me-2"></i>Cluster Overview
             </h3>
             <div class="row">
-                <div class="col-md-3">
+                <div class="col-lg-3 col-md-6">
                     <div class="text-center">
                         <div class="metric-value status-{% if cluster_type == 'standalone' %}healthy{% elif cluster_type == 'replica' %}warning{% else %}error{% endif %}">
                             {{ cluster_type|title }}
@@ -22,19 +22,25 @@
                         <div class="metric-label">Cluster Type</div>
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-lg-3 col-md-6">
                     <div class="text-center">
                         <div class="metric-value">{{ mongodb_version }}</div>
                         <div class="metric-label">MongoDB Version</div>
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-lg-3 col-md-6">
                     <div class="text-center">
                         <div class="metric-value">{{ uptime_days|floatformat(1) }}</div>
                         <div class="metric-label">Uptime (Days)</div>
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-lg-3 col-md-6">
+                    <div class="text-center">
+                        <div class="metric-value">{{ current_connections }}</div>
+                        <div class="metric-label">Current Connections</div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6">
                     <div class="text-center">
                         <div class="metric-value">{{ total_connections }}</div>
                         <div class="metric-label">Total Connections</div>

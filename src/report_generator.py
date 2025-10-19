@@ -68,6 +68,7 @@ class HTMLReportGenerator:
         
         # Calculate derived metrics
         uptime_days = stats.server_status.uptime / (24 * 3600) if stats.server_status.uptime else 0
+        current_connections = stats.server_status.connections_current
         total_connections = (stats.server_status.connections_current + 
                            stats.server_status.connections_available)
         memory_usage_gb = stats.server_status.mem_resident / (1024 * 1024) if stats.server_status.mem_resident else 0
@@ -118,6 +119,7 @@ class HTMLReportGenerator:
             'memory_usage_gb': memory_usage_gb,
             'storage_size_gb': stats.total_storage_size_gb,
             'uptime_days': uptime_days,
+            'current_connections': current_connections,
             'total_connections': total_connections,
             
             # Operation counters
