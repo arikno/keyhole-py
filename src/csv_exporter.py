@@ -46,20 +46,13 @@ class ConsolidatedCollection:
     index_size_bytes: int
     avg_document_size: float
     
-    # Structure analysis
+    # Structure analysis - simplified to match HTML template
     max_nesting_depth: int
-    avg_nesting_depth: float
-    has_deep_nesting: bool
     max_array_size: int
-    avg_array_size: float
-    has_large_arrays: bool
-    total_fields: int
-    total_queryable_paths: int
     
     # Fragmentation analysis
     fragmentation_percentage: float
     storage_efficiency: float
-    wasted_space_bytes: int
     fragmentation_level: str
     
     # Index summary
@@ -67,11 +60,6 @@ class ConsolidatedCollection:
     unused_indexes: int
     redundant_indexes: int
     ttl_indexes: int
-    
-    # Issues and recommendations
-    structure_issues: str
-    index_issues: str
-    recommendations: str
 
 
 class CSVExporter:
@@ -226,21 +214,6 @@ class CSVExporter:
                     if index.get('expireAfterSeconds', 0) > 0:
                         ttl_indexes += 1
             
-            # Collect issues and recommendations
-            structure_issues = []
-            index_issues = []
-            recommendations = []
-            
-            if structure_analysis:
-                if hasattr(structure_analysis, 'issues'):
-                    structure_issues.extend(structure_analysis.issues)
-                if hasattr(structure_analysis, 'recommendations'):
-                    recommendations.extend(structure_analysis.recommendations)
-            
-            if detailed_indexes:
-                for index in detailed_indexes:
-                    if index.issues:
-                        index_issues.extend(index.issues)
             
             consolidated_collection = ConsolidatedCollection(
                 database=db_name,
@@ -252,32 +225,20 @@ class CSVExporter:
                 index_size_bytes=collection.total_index_size,
                 avg_document_size=collection.avg_obj_size,
                 
-                # Structure analysis
+                # Structure analysis - simplified to match HTML template
                 max_nesting_depth=structure_analysis.max_nesting_depth if structure_analysis else 0,
-                avg_nesting_depth=structure_analysis.avg_nesting_depth if structure_analysis else 0,
-                has_deep_nesting=structure_analysis.has_deep_nesting if structure_analysis else False,
                 max_array_size=structure_analysis.max_array_size if structure_analysis else 0,
-                avg_array_size=structure_analysis.avg_array_size if structure_analysis else 0,
-                has_large_arrays=structure_analysis.has_large_arrays if structure_analysis else False,
-                total_fields=structure_analysis.total_fields if structure_analysis else 0,
-                total_queryable_paths=structure_analysis.total_queryable_paths if structure_analysis else 0,
                 
                 # Fragmentation analysis
                 fragmentation_percentage=structure_analysis.fragmentation_percentage if structure_analysis else 0,
                 storage_efficiency=structure_analysis.storage_efficiency if structure_analysis else 100,
-                wasted_space_bytes=structure_analysis.wasted_space_bytes if structure_analysis else 0,
                 fragmentation_level=structure_analysis.fragmentation_level if structure_analysis else 'unknown',
                 
                 # Index summary
                 total_indexes=total_indexes,
                 unused_indexes=unused_indexes,
                 redundant_indexes=redundant_indexes,
-                ttl_indexes=ttl_indexes,
-                
-                # Issues and recommendations
-                structure_issues='; '.join(structure_issues),
-                index_issues='; '.join(index_issues),
-                recommendations='; '.join(recommendations)
+                ttl_indexes=ttl_indexes
             )
             
             consolidated_collections.append(consolidated_collection)
@@ -287,12 +248,9 @@ class CSVExporter:
             fieldnames = [
                 'database', 'collection', 'namespace', 'document_count', 'total_size_bytes',
                 'storage_size_bytes', 'index_size_bytes', 'avg_document_size',
-                'max_nesting_depth', 'avg_nesting_depth', 'has_deep_nesting',
-                'max_array_size', 'avg_array_size', 'has_large_arrays',
-                'total_fields', 'total_queryable_paths',
-                'fragmentation_percentage', 'storage_efficiency', 'wasted_space_bytes', 'fragmentation_level',
-                'total_indexes', 'unused_indexes', 'redundant_indexes', 'ttl_indexes',
-                'structure_issues', 'index_issues', 'recommendations'
+                'max_nesting_depth', 'max_array_size',
+                'fragmentation_percentage', 'storage_efficiency', 'fragmentation_level',
+                'total_indexes', 'unused_indexes', 'redundant_indexes', 'ttl_indexes'
             ]
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
             writer.writeheader()
@@ -308,22 +266,12 @@ class CSVExporter:
                     'index_size_bytes': collection.index_size_bytes,
                     'avg_document_size': collection.avg_document_size,
                     'max_nesting_depth': collection.max_nesting_depth,
-                    'avg_nesting_depth': collection.avg_nesting_depth,
-                    'has_deep_nesting': collection.has_deep_nesting,
                     'max_array_size': collection.max_array_size,
-                    'avg_array_size': collection.avg_array_size,
-                    'has_large_arrays': collection.has_large_arrays,
-                    'total_fields': collection.total_fields,
-                    'total_queryable_paths': collection.total_queryable_paths,
                     'fragmentation_percentage': collection.fragmentation_percentage,
                     'storage_efficiency': collection.storage_efficiency,
-                    'wasted_space_bytes': collection.wasted_space_bytes,
                     'fragmentation_level': collection.fragmentation_level,
                     'total_indexes': collection.total_indexes,
                     'unused_indexes': collection.unused_indexes,
                     'redundant_indexes': collection.redundant_indexes,
-                    'ttl_indexes': collection.ttl_indexes,
-                    'structure_issues': collection.structure_issues,
-                    'index_issues': collection.index_issues,
-                    'recommendations': collection.recommendations
+                    'ttl_indexes': collection.ttl_indexes
                 })
