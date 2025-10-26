@@ -761,7 +761,7 @@ class EnhancedAnalyzer:
             self.logger.error(f"Error getting performance metrics: {e}")
             return PerformanceMetrics()
     
-    def analyze_cluster_health(self) -> Dict[str, Any]:
+    def analyze_cluster_health(self, collections_data: List = None) -> Dict[str, Any]:
         """Analyze overall cluster health"""
         health_report = {
             'timestamp': datetime.now(),
@@ -775,24 +775,46 @@ class EnhancedAnalyzer:
             # Get server status
             server_status = self.client.client.admin.command('serverStatus')
             
-            # Check memory usage
+            # Check memory usage (>75%)
             mem = server_status.get('mem', {})
-            if mem.get('resident', 0) > 0:
-                memory_usage_ratio = mem.get('resident', 0) / (mem.get('resident', 0) + mem.get('virtual', 0))
-                if memory_usage_ratio > 0.9:
-                    health_report['issues'].append("High memory usage detected")
+            # Memory usage ratio: resident / virtual
+            if mem.get('virtual', 0) > 0 and mem.get('resident', 0) > 0:
+                memory_usage_ratio = mem.get('resident', 0) / mem.get('virtual', 0)
+                if memory_usage_ratio > 0.75:
+                    health_report['issues'].append(f"High memory usage detected ({memory_usage_ratio*100:.1f}%)")
                     health_report['recommendations'].append("Consider increasing memory or optimizing queries")
             
-            # Check connection usage
+            # Check connection usage (>75%)
             connections = server_status.get('connections', {})
             current = connections.get('current', 0)
             available = connections.get('available', 0)
             
             if current + available > 0:
                 connection_usage = current / (current + available)
-                if connection_usage > 0.8:
-                    health_report['issues'].append("High connection usage detected")
+                if connection_usage > 0.75:
+                    health_report['issues'].append(f"High connection usage detected ({connection_usage*100:.1f}%)")
                     health_report['recommendations'].append("Consider connection pooling optimization")
+            
+            # Check nesting level per table (>6)
+            if collections_data:
+                for coll in collections_data:
+                    if hasattr(coll, 'structure_analysis') and coll.structure_analysis:
+                        nesting = coll.structure_analysis.max_nesting_depth
+                        if nesting > 6:
+                            health_report['issues'].append(f"Deep nesting detected in {coll.namespace} (depth: {nesting})")
+                            health_report['recommendations'].append(f"Consider denormalizing collection {coll.namespace}")
+                    
+                    # Check array items (>1000)
+                    if hasattr(coll, 'structure_analysis') and coll.structure_analysis:
+                        array_size = coll.structure_analysis.max_array_size
+                        if array_size > 1000:
+                            health_report['issues'].append(f"Large array detected in {coll.namespace} ({array_size} items)")
+                            health_report['recommendations'].append(f"Consider splitting large arrays in collection {coll.namespace}")
+                    
+                    # Check number of indexes (>10)
+                    if hasattr(coll, 'nindexes') and coll.nindexes > 10:
+                        health_report['issues'].append(f"Too many indexes in {coll.namespace} ({coll.nindexes} indexes)")
+                        health_report['recommendations'].append(f"Review and remove unused/redundant indexes in {coll.namespace}")
             
             # Check operation counters for anomalies
             opcounters = server_status.get('opcounters', {})

@@ -470,13 +470,13 @@ class ClusterStatsCollector:
             # Get detailed performance metrics
             stats.detailed_performance_metrics = self.enhanced_analyzer.get_detailed_performance_metrics()
             
-            # Analyze cluster health
-            stats.cluster_health = self.enhanced_analyzer.analyze_cluster_health()
-            
-            # Enhanced collection analysis
+            # Enhanced collection analysis first (needed for cluster health checks)
             for collection in stats.collections:
                 if not collection.name.startswith('system.'):
                     self._enhance_collection_analysis(collection)
+            
+            # Analyze cluster health with collection data
+            stats.cluster_health = self.enhanced_analyzer.analyze_cluster_health(collections_data=stats.collections)
             
         except Exception as e:
             self.logger.error(f"Error performing enhanced analysis: {e}")
